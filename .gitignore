@@ -1,0 +1,25 @@
+# Секреты и локальные настройки
+.env
+.env.*
+!.env.example
+secrets/
+credentials*.json
+service-account*.json
+*.key
+*.pem
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Логи
+logs/
+*.log
+
+# Редакторы и macOS
+.idea/
+.vscode/
+.DS_Store
