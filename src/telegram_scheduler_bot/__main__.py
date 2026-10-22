@@ -1,12 +1,15 @@
 import asyncio
 import logging
+from contextlib import suppress
 
 from aiogram import Bot, Dispatcher
 from aiogram.filters import Command, CommandStart
 from aiogram.types import Message
 
 from telegram_scheduler_bot.config import load_settings
+from telegram_scheduler_bot.delivery_state import DeliveryState
 from telegram_scheduler_bot.message_format import format_schedule
+from telegram_scheduler_bot.scheduler import run_scheduler
 from telegram_scheduler_bot.sheets import get_today_schedule
 
 
@@ -15,6 +18,7 @@ logger = logging.getLogger(__name__)
 
 async def main() -> None:
     settings = load_settings()
+    state = DeliveryState()
     dispatcher = Dispatcher()
 
     def is_allowed(message: Message) -> bool:
@@ -60,17 +64,22 @@ async def main() -> None:
 
         await message.answer(text)
 
-    logger.info(
-        "Запуск бота. Разрешённых чатов: %s",
-        len(settings.allowed_chat_ids),
-    )
-
     async with Bot(token=settings.bot_token) as bot:
-        await dispatcher.start_polling(
-            bot,
-            handle_as_tasks=False,
-            allowed_updates=["message"],
+        scheduler_task = asyncio.create_task(
+            run_scheduler(bot, settings, state)
         )
+
+        try:
+            await dispatcher.start_polling(
+                bot,
+                handle_as_tasks=False,
+                allowed_updates=["message"],
+                close_bot_session=False,
+            )
+        finally:
+            scheduler_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await scheduler_task
 
 
 if __name__ == "__main__":
