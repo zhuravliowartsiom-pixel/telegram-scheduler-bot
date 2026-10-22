@@ -26,3 +26,5 @@ logs/
 
 # Local delivery state
 data/
+
+# Personal surname-to-username mapping
