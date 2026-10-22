@@ -1,0 +1,40 @@
+services:
+  bot:
+    image: telegram-scheduler-bot:local
+    build: .
+    restart: unless-stopped
+    init: true
+
+    env_file:
+      - .env
+
+    volumes:
+      - type: bind
+        source: ./secrets
+        target: /app/secrets
+        read_only: true
+        bind:
+          create_host_path: false
+      - bot_data:/app/data
+
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+    mem_limit: 256m
+    cpus: 0.75
+    pids_limit: 64
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+
+volumes:
+  bot_data:
