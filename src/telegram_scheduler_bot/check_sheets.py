@@ -1,15 +1,20 @@
+import json
 import os
+from datetime import datetime
 from urllib.parse import quote
+from zoneinfo import ZoneInfo
 
 from dotenv import load_dotenv
 from google.auth.transport.requests import AuthorizedSession
 from google.oauth2 import service_account
 
+from telegram_scheduler_bot.day_selection import select_day
 from telegram_scheduler_bot.week_selection import select_current_week
 
 
 def main() -> None:
     load_dotenv()
+    today = datetime.now(ZoneInfo("Europe/Minsk")).date()
 
     names = (
         "GOOGLE_APPLICATION_CREDENTIALS",
@@ -42,13 +47,13 @@ def main() -> None:
         if response.status_code != 200:
             print(f"Ошибка списка вкладок: HTTP {response.status_code}")
             print("Статус:", response.json().get("error", {}).get("status"))
-            return
+            raise SystemExit(1)
 
         titles = [
             sheet["properties"]["title"]
             for sheet in response.json().get("sheets", [])
         ]
-        title = select_current_week(titles)
+        title = select_current_week(titles, today=today)
 
         escaped_title = title.replace("'", "''")
         full_range = (
@@ -63,14 +68,15 @@ def main() -> None:
         if response.status_code != 200:
             print(f"Ошибка чтения ячеек: HTTP {response.status_code}")
             print("Статус:", response.json().get("error", {}).get("status"))
-            return
+            raise SystemExit(1)
 
         rows = response.json().get("values", [])
 
+    result = select_day(rows, today=today)
+
     print("Выбрана вкладка:", title)
-    print("Чтение выполнено успешно.")
-    print("Получено строк:", len(rows))
-    print("Максимум столбцов:", max((len(row) for row in rows), default=0))
+    print("Расписание на сегодня:")
+    print(json.dumps(result, ensure_ascii=False, indent=2))
 
 
 if __name__ == "__main__":
