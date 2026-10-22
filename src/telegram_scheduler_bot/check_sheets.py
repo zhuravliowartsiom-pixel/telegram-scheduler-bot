@@ -1,4 +1,3 @@
-import json
 import os
 from datetime import datetime
 from urllib.parse import quote
@@ -9,6 +8,7 @@ from google.auth.transport.requests import AuthorizedSession
 from google.oauth2 import service_account
 
 from telegram_scheduler_bot.day_selection import select_day
+from telegram_scheduler_bot.message_format import format_schedule
 from telegram_scheduler_bot.week_selection import select_current_week
 
 
@@ -72,11 +72,8 @@ def main() -> None:
 
         rows = response.json().get("values", [])
 
-    result = select_day(rows, today=today)
-
-    print("Выбрана вкладка:", title)
-    print("Расписание на сегодня:")
-    print(json.dumps(result, ensure_ascii=False, indent=2))
+    schedule = select_day(rows, today=today)
+    print(format_schedule(schedule))
 
 
 if __name__ == "__main__":
