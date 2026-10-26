@@ -11,6 +11,7 @@ class Settings:
     bot_token: str
     allowed_chat_ids: frozenset[int]
     target_chat_ids: tuple[int, ...]
+    target_thread_id: int | None
     daily_send_time: time
     timezone: ZoneInfo
 
@@ -48,11 +49,24 @@ def load_settings() -> Settings:
     if not target_ids:
         raise ValueError("Заполни TELEGRAM_TARGET_CHAT_IDS в .env")
 
-    if not set(target_ids).issubset(allowed_ids):
-        raise ValueError(
-            "Все получатели рассылки должны быть "
-            "в TELEGRAM_ALLOWED_CHAT_IDS"
-        )
+    raw_thread = os.getenv("TELEGRAM_TARGET_THREAD_ID", "").strip()
+    thread_id = None
+
+    if raw_thread:
+        try:
+            thread_id = int(raw_thread)
+        except ValueError:
+            raise ValueError(
+                "TELEGRAM_TARGET_THREAD_ID должен быть целым числом"
+            ) from None
+
+        if thread_id <= 0:
+            raise ValueError("ID топика должен быть положительным")
+
+        if len(target_ids) != 1:
+            raise ValueError(
+                "Для отправки в топик укажи ровно одну группу"
+            )
 
     raw_time = os.getenv("DAILY_SEND_TIME", "14:00").strip()
     try:
@@ -70,21 +84,20 @@ def load_settings() -> Settings:
         )
     except ValueError:
         raise ValueError(
-            "DAILY_SEND_TIME должен быть в формате ЧЧ:ММ, например 14:00"
+            "DAILY_SEND_TIME должен быть в формате ЧЧ:ММ"
         ) from None
 
     timezone_name = os.getenv("BOT_TIMEZONE", "Europe/Minsk").strip()
     try:
         timezone = ZoneInfo(timezone_name)
     except (ZoneInfoNotFoundError, ValueError):
-        raise ValueError(
-            "BOT_TIMEZONE должен содержать действующий часовой пояс"
-        ) from None
+        raise ValueError("Некорректный BOT_TIMEZONE") from None
 
     return Settings(
         bot_token=token,
         allowed_chat_ids=allowed_ids,
         target_chat_ids=target_ids,
+        target_thread_id=thread_id,
         daily_send_time=send_time,
         timezone=timezone,
     )

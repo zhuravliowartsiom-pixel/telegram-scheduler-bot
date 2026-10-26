@@ -43,7 +43,11 @@ async def send_today(
             raise RuntimeError("Дата изменилась во время рассылки")
 
         try:
-            await bot.send_message(chat_id=chat_id, text=text)
+            await bot.send_message(
+                chat_id=chat_id,
+                message_thread_id=settings.target_thread_id,
+                text=text,
+            )
         except Exception as error:
             failed += 1
             logger.error(
