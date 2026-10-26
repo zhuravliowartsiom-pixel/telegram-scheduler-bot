@@ -18,6 +18,17 @@ class DeliveryState:
                 )
                 """
             )
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS reminders (
+                    day TEXT NOT NULL,
+                    slot TEXT NOT NULL,
+                    chat_id INTEGER NOT NULL,
+                    thread_id INTEGER NOT NULL,
+                    PRIMARY KEY (day, slot, chat_id, thread_id)
+                )
+                """
+            )
 
     def was_sent(self, day: date, chat_id: int) -> bool:
         with sqlite3.connect(self.path) as connection:
@@ -36,4 +47,39 @@ class DeliveryState:
                 VALUES (?, ?)
                 """,
                 (day.isoformat(), chat_id),
+            )
+
+    def reminder_was_sent(
+        self,
+        day: date,
+        slot: str,
+        chat_id: int,
+        thread_id: int | None,
+    ) -> bool:
+        with sqlite3.connect(self.path) as connection:
+            row = connection.execute(
+                """
+                SELECT 1 FROM reminders
+                WHERE day = ? AND slot = ? AND chat_id = ? AND thread_id = ?
+                """,
+                (day.isoformat(), slot, chat_id, thread_id or 0),
+            ).fetchone()
+
+        return row is not None
+
+    def mark_reminder_sent(
+        self,
+        day: date,
+        slot: str,
+        chat_id: int,
+        thread_id: int | None,
+    ) -> None:
+        with sqlite3.connect(self.path) as connection:
+            connection.execute(
+                """
+                INSERT OR IGNORE INTO reminders
+                (day, slot, chat_id, thread_id)
+                VALUES (?, ?, ?, ?)
+                """,
+                (day.isoformat(), slot, chat_id, thread_id or 0),
             )
